@@ -5,6 +5,8 @@
 #include "xAODRootAccess/Init.h"
 #include "xAODRootAccess/TEvent.h"
 #include <AsgTools/MessageCheck.h>
+#include "xAODEventInfo/EventInfo.h"
+#include "xAODJet/JetContainer.h"
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(TrackSkimmer)
@@ -84,6 +86,8 @@ EL::StatusCode TrackSkimmer :: initialize ()
   ANA_CHECK_SET_TYPE(EL::StatusCode);
   xAOD::TEvent* event = wk()->xaodEvent();
   Info("initialize()","Number of events = %lli",event->getEntries());
+  m_eventCounter = 0;
+  m_isMC = false;
   return EL::StatusCode::SUCCESS;
 }
 
@@ -97,6 +101,15 @@ EL::StatusCode TrackSkimmer :: execute ()
   // code will go.
   ANA_CHECK_SET_TYPE(EL::StatusCode);
   xAOD::TEvent* event = wk()->xaodEvent();
+  if( m_eventCounter % 100 == 0 ){
+    Info("execute()","Event Number = %i",m_eventCounter);
+  }
+  m_eventCounter++;
+  const xAOD::EventInfo* eventInfo = 0;
+  ANA_CHECK(event->retrieve( eventInfo, "EventInfo"));  
+  if(eventInfo->eventType( xAOD::EventInfo::IS_SIMULATION ) ){
+       m_isMC = true; // can do something with this later
+  }   
   return EL::StatusCode::SUCCESS;
 }
 

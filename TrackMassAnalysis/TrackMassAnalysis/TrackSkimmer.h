@@ -18,8 +18,8 @@ public:
 public:
   // Tree *myTree; //!
   // TH1 *myHist; //!
-
-
+  int m_eventCounter; //!
+  bool m_isMC; //!
 
   // this is a standard constructor
   TrackSkimmer ();
