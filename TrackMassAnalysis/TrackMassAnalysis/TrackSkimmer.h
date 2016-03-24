@@ -2,6 +2,8 @@
 #define TrackMassAnalysis_TrackSkimmer_H
 
 #include <EventLoop/Algorithm.h>
+#include "JetSelectorTools/JetCleaningTool.h"
+#include <TTree.h>
 
 class TrackSkimmer : public EL::Algorithm
 {
@@ -20,6 +22,26 @@ public:
   // TH1 *myHist; //!
   int m_eventCounter; //!
   bool m_isMC; //!
+  JetCleaningTool *m_jetCleaning;//!
+  std::string m_outputName;
+  TTree *m_tree; //!
+  int b_eventNumber; //!
+  int b_mcChannelNumber; //!
+  double b_mcEventWeight; //!
+  vector<double> *b_jet_pt; //!
+  vector<double> *b_jet_eta; //!
+  vector<double> *b_jet_phi; //!
+  vector<double> *b_jet_e; //!
+
+  vector<double> *b_track_pt; //!
+  vector<double> *b_track_eta; //!
+  vector<double> *b_track_phi; //!
+  vector<double> *b_track_e; //!
+
+  vector<double> *b_pseudotrack_pt; //!
+  vector<double> *b_pseudotrack_eta; //!
+  vector<double> *b_pseudotrack_phi; //!
+  vector<double> *b_pseudotrack_e; //!
 
   // this is a standard constructor
   TrackSkimmer ();
@@ -34,7 +56,7 @@ public:
   virtual EL::StatusCode postExecute ();
   virtual EL::StatusCode finalize ();
   virtual EL::StatusCode histFinalize ();
-
+  void setOutputName(std::string name){ m_outputName = name; }
   // this is needed to distribute the algorithm to the workers
   ClassDef(TrackSkimmer, 1);
 };

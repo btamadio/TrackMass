@@ -7,6 +7,8 @@
 #include <AsgTools/MessageCheck.h>
 #include "xAODEventInfo/EventInfo.h"
 #include "xAODJet/JetContainer.h"
+#include <TFile.h>
+
 
 // this is needed to distribute the algorithm to the workers
 ClassImp(TrackSkimmer)
@@ -48,6 +50,12 @@ EL::StatusCode TrackSkimmer :: histInitialize ()
   // beginning on each worker node, e.g. create histograms and output
   // trees.  This method gets called before any input files are
   // connected.
+  TFile *outputFile = wk()->getOutputFile(m_outputName);
+  m_tree = new TTree ("tree", "tree");
+  m_tree->SetDirectory (outputFile);
+  m_tree->Branch("EventNumber", &b_eventNumber);
+  m_tree->Branch("mcEventWeight",&b_mcEventWeight);
+  m_tree->Branch("mcChannelNumber",&b_mcChannelNumber);
   return EL::StatusCode::SUCCESS;
 }
 
@@ -88,6 +96,12 @@ EL::StatusCode TrackSkimmer :: initialize ()
   Info("initialize()","Number of events = %lli",event->getEntries());
   m_eventCounter = 0;
   m_isMC = false;
+
+  m_jetCleaning = new JetCleaningTool("JetCleaning");
+  m_jetCleaning->msg().setLevel( MSG::DEBUG ); 
+  ANA_CHECK(m_jetCleaning->setProperty( "CutLevel", "LooseBad"));
+  ANA_CHECK(m_jetCleaning->setProperty("DoUgly", false));
+  ANA_CHECK(m_jetCleaning->initialize());
   return EL::StatusCode::SUCCESS;
 }
 
@@ -110,6 +124,23 @@ EL::StatusCode TrackSkimmer :: execute ()
   if(eventInfo->eventType( xAOD::EventInfo::IS_SIMULATION ) ){
        m_isMC = true; // can do something with this later
   }   
+  b_eventNumber = eventInfo->eventNumber();
+  b_mcChannelNumber = eventInfo->mcChannelNumber();
+  b_mcEventWeight = eventInfo->mcEventWeight();
+  int numGoodJets = 0;
+  const xAOD::JetContainer* jets = 0;
+  ANA_CHECK(event->retrieve( jets, "AntiKt4EMTopoJets" ));
+  Info("execute()", "  number of jets = %lu", jets->size());
+  // loop over the jets in the container
+  xAOD::JetContainer::const_iterator jet_itr = jets->begin();
+  xAOD::JetContainer::const_iterator jet_end = jets->end();
+  for( ; jet_itr != jet_end; ++jet_itr ) {
+       Info("execute()", "  jet pt = %.2f GeV", ((*jet_itr)->pt() * 0.001));
+       if( !m_jetCleaning->accept( **jet_itr )) continue; //only keep good clean jets
+       numGoodJets++;
+  } // just to print out something
+  Info("execute()","  number of good jets = %i",numGoodJets);
+  m_tree->Fill();
   return EL::StatusCode::SUCCESS;
 }
 
@@ -136,8 +167,12 @@ EL::StatusCode TrackSkimmer :: finalize ()
   // submission node after all your histogram outputs have been
   // merged.  This is different from histFinalize() in that it only
   // gets called on worker nodes that processed input events.
-  xAOD::TEvent* event = wk()->xaodEvent();
   ANA_CHECK_SET_TYPE(EL::StatusCode);
+  xAOD::TEvent* event = wk()->xaodEvent();
+  if( m_jetCleaning ) {
+    delete m_jetCleaning;
+    m_jetCleaning = 0;
+  }
   return EL::StatusCode::SUCCESS;
 }
 
